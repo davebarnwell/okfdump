@@ -1,57 +1,30 @@
 package okf
 
 import (
-	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
-func frontmatter(fields map[string]any) string {
-	keys := make([]string, 0, len(fields))
-	for key := range fields {
-		keys = append(keys, key)
+type frontmatterFields struct {
+	Type        string   `yaml:"type"`
+	Title       string   `yaml:"title"`
+	Description string   `yaml:"description,omitempty"`
+	Resource    string   `yaml:"resource,omitempty"`
+	Tags        []string `yaml:"tags,omitempty"`
+	Timestamp   string   `yaml:"timestamp,omitempty"`
+}
+
+func frontmatter(fields frontmatterFields) string {
+	encoded, err := yaml.Marshal(fields)
+	if err != nil {
+		panic(fmt.Sprintf("marshal frontmatter: %v", err))
 	}
-	sort.SliceStable(keys, func(i, j int) bool {
-		order := map[string]int{"type": 0, "title": 1, "description": 2, "resource": 3, "tags": 4, "timestamp": 5}
-		oi, iok := order[keys[i]]
-		oj, jok := order[keys[j]]
-		if iok && jok {
-			return oi < oj
-		}
-		if iok {
-			return true
-		}
-		if jok {
-			return false
-		}
-		return keys[i] < keys[j]
-	})
 
 	var b strings.Builder
 	b.WriteString("---\n")
-	for _, key := range keys {
-		switch value := fields[key].(type) {
-		case []string:
-			b.WriteString(key + ": [")
-			for i, item := range value {
-				if i > 0 {
-					b.WriteString(", ")
-				}
-				b.WriteString(yamlString(item))
-			}
-			b.WriteString("]\n")
-		case string:
-			b.WriteString(key + ": " + yamlString(value) + "\n")
-		default:
-			b.WriteString(fmt.Sprintf("%s: %v\n", key, value))
-		}
-	}
+	b.Write(encoded)
 	b.WriteString("---\n\n")
 	return b.String()
-}
-
-func yamlString(value string) string {
-	encoded, _ := json.Marshal(value)
-	return string(encoded)
 }

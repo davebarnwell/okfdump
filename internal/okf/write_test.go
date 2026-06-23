@@ -56,8 +56,8 @@ func TestWriteBundleCreatesConformantConceptFiles(t *testing.T) {
 	text := string(content)
 	for _, want := range []string{
 		"---\n",
-		"type: \"MySQL Base Table\"",
-		"title: \"app.orders\"",
+		"type: MySQL Base Table",
+		"title: app.orders",
 		"# Schema",
 		"| `customer_id` | `bigint` | no | - | - |",
 		"[app.customers](/tables/app/customers.md)",

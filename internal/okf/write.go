@@ -69,13 +69,13 @@ func (w bundleWriter) writeDatabaseFiles() error {
 	}
 
 	body := strings.Builder{}
-	body.WriteString(frontmatter(map[string]any{
-		"type":        fmt.Sprintf("%s Database", w.bundle.Driver.DisplayName()),
-		"title":       w.bundle.Database,
-		"description": fmt.Sprintf("%s database `%s` with %d schema(s).", w.bundle.Driver.DisplayName(), w.bundle.Database, len(w.bundle.Schemas)),
-		"resource":    resourceURI(w.bundle, "", ""),
-		"tags":        []string{w.bundle.Driver.String(), "database"},
-		"timestamp":   w.bundle.GeneratedAt.Format("2006-01-02T15:04:05Z"),
+	body.WriteString(frontmatter(frontmatterFields{
+		Type:        fmt.Sprintf("%s Database", w.bundle.Driver.DisplayName()),
+		Title:       w.bundle.Database,
+		Description: fmt.Sprintf("%s database `%s` with %d schema(s).", w.bundle.Driver.DisplayName(), w.bundle.Database, len(w.bundle.Schemas)),
+		Resource:    resourceURI(w.bundle, "", ""),
+		Tags:        []string{w.bundle.Driver.String(), "database"},
+		Timestamp:   w.bundle.GeneratedAt.Format("2006-01-02T15:04:05Z"),
 	}))
 	body.WriteString("# Schemas\n\n")
 	if len(schemaLinks) == 0 {
@@ -106,13 +106,13 @@ func (w bundleWriter) writeSchemaFiles() error {
 
 	for _, schema := range w.bundle.Schemas {
 		body := strings.Builder{}
-		body.WriteString(frontmatter(map[string]any{
-			"type":        fmt.Sprintf("%s Schema", w.bundle.Driver.DisplayName()),
-			"title":       schema.Name,
-			"description": fmt.Sprintf("Schema `%s` in database `%s` with %d table(s) and view(s).", schema.Name, w.bundle.Database, len(schema.Tables)),
-			"resource":    resourceURI(w.bundle, schema.Name, ""),
-			"tags":        []string{w.bundle.Driver.String(), "schema", schema.Name},
-			"timestamp":   w.bundle.GeneratedAt.Format("2006-01-02T15:04:05Z"),
+		body.WriteString(frontmatter(frontmatterFields{
+			Type:        fmt.Sprintf("%s Schema", w.bundle.Driver.DisplayName()),
+			Title:       schema.Name,
+			Description: fmt.Sprintf("Schema `%s` in database `%s` with %d table(s) and view(s).", schema.Name, w.bundle.Database, len(schema.Tables)),
+			Resource:    resourceURI(w.bundle, schema.Name, ""),
+			Tags:        []string{w.bundle.Driver.String(), "schema", schema.Name},
+			Timestamp:   w.bundle.GeneratedAt.Format("2006-01-02T15:04:05Z"),
 		}))
 		body.WriteString("# Tables\n\n")
 		if len(schema.Tables) == 0 {
@@ -171,13 +171,13 @@ func (w bundleWriter) writeTableFiles() error {
 
 func (w bundleWriter) writeTable(schemaDir string, table catalog.Table) error {
 	body := strings.Builder{}
-	body.WriteString(frontmatter(map[string]any{
-		"type":        fmt.Sprintf("%s %s", w.bundle.Driver.DisplayName(), title(table.Kind)),
-		"title":       fmt.Sprintf("%s.%s", table.Schema, table.Name),
-		"description": tableDescription(table),
-		"resource":    resourceURI(w.bundle, table.Schema, table.Name),
-		"tags":        tableTags(w.bundle.Driver, table),
-		"timestamp":   w.bundle.GeneratedAt.Format("2006-01-02T15:04:05Z"),
+	body.WriteString(frontmatter(frontmatterFields{
+		Type:        fmt.Sprintf("%s %s", w.bundle.Driver.DisplayName(), title(table.Kind)),
+		Title:       fmt.Sprintf("%s.%s", table.Schema, table.Name),
+		Description: tableDescription(table),
+		Resource:    resourceURI(w.bundle, table.Schema, table.Name),
+		Tags:        tableTags(w.bundle.Driver, table),
+		Timestamp:   w.bundle.GeneratedAt.Format("2006-01-02T15:04:05Z"),
 	}))
 
 	body.WriteString("# Schema\n\n")
