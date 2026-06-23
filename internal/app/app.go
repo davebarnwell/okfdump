@@ -29,7 +29,19 @@ type Config struct {
 	Out          string
 	IncludeViews bool
 	Timeout      time.Duration
-	SSH          sshforward.Config
+	SSH          SSHConfig
+}
+
+type SSHConfig struct {
+	Host                  string
+	Port                  int
+	User                  string
+	Password              string
+	PasswordEnv           string
+	KeyPath               string
+	KeyPassphrase         string
+	KnownHostsPath        string
+	InsecureIgnoreHostKey bool
 }
 
 func DefaultConfig() Config {
@@ -40,7 +52,7 @@ func DefaultConfig() Config {
 		Out:          "./okf-bundle",
 		IncludeViews: true,
 		Timeout:      30 * time.Second,
-		SSH: sshforward.Config{
+		SSH: SSHConfig{
 			Port:           22,
 			KnownHostsPath: "~/.ssh/known_hosts",
 		},
@@ -58,10 +70,9 @@ func Run(parent context.Context, cfg Config) error {
 	dbHost, dbPort := cfg.Host, cfg.Port
 	var tunnel *sshforward.Tunnel
 	if cfg.SSH.Host != "" {
-		cfg.SSH.TargetHost = cfg.Host
-		cfg.SSH.TargetPort = cfg.Port
+		sshConfig := sshForwardConfig(cfg)
 		var err error
-		tunnel, err = sshforward.Start(ctx, cfg.SSH)
+		tunnel, err = sshforward.Start(ctx, sshConfig)
 		if err != nil {
 			return fmt.Errorf("start SSH tunnel: %w", err)
 		}
@@ -133,6 +144,21 @@ func validateConfig(cfg *Config) error {
 		return errors.New("--database is required when it cannot be inferred from --dsn")
 	}
 	return nil
+}
+
+func sshForwardConfig(cfg Config) sshforward.Config {
+	return sshforward.Config{
+		Host:                  cfg.SSH.Host,
+		Port:                  cfg.SSH.Port,
+		User:                  cfg.SSH.User,
+		Password:              cfg.SSH.Password,
+		KeyPath:               cfg.SSH.KeyPath,
+		KeyPassphrase:         cfg.SSH.KeyPassphrase,
+		KnownHostsPath:        cfg.SSH.KnownHostsPath,
+		InsecureIgnoreHostKey: cfg.SSH.InsecureIgnoreHostKey,
+		TargetHost:            cfg.Host,
+		TargetPort:            cfg.Port,
+	}
 }
 
 func dbConnConfig(cfg Config) dbconn.Config {

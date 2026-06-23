@@ -22,7 +22,6 @@ type Config struct {
 	Port                  int
 	User                  string
 	Password              string
-	PasswordEnv           string
 	KeyPath               string
 	KeyPassphrase         string
 	KnownHostsPath        string

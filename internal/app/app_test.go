@@ -33,3 +33,17 @@ func TestValidateConfigRequiresSSHUserWhenTunneling(t *testing.T) {
 		t.Fatal("expected SSH user validation error")
 	}
 }
+
+func TestValidateConfigResolvesSSHPasswordEnv(t *testing.T) {
+	t.Setenv("OKFDUMP_TEST_SSH_PASSWORD", "secret")
+	cfg := DefaultConfig()
+	cfg.Database = "app_db"
+	cfg.SSH.PasswordEnv = "OKFDUMP_TEST_SSH_PASSWORD"
+
+	if err := validateConfig(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SSH.Password != "secret" {
+		t.Fatalf("SSH password = %q, want env value", cfg.SSH.Password)
+	}
+}
