@@ -39,6 +39,7 @@ func newRootCommand() *cobra.Command {
 	flags.StringVar(&cfg.Password, "password", cfg.Password, "database password")
 	flags.StringVar(&cfg.PasswordEnv, "password-env", cfg.PasswordEnv, "environment variable containing the database password")
 	flags.StringVar(&cfg.Database, "database", cfg.Database, "database/schema name to inspect")
+	flags.StringSliceVar(&cfg.Tables, "table", cfg.Tables, "table to dump; repeat or comma-separate values, accepts table or schema.table")
 	flags.StringVar(&cfg.SSLMode, "sslmode", cfg.SSLMode, "Postgres sslmode when building a DSN")
 	flags.StringVarP(&cfg.Out, "out", "o", cfg.Out, "output OKF bundle directory")
 	flags.BoolVar(&cfg.IncludeViews, "include-views", cfg.IncludeViews, "include database views")

@@ -25,6 +25,7 @@ type Config struct {
 	Password     string
 	PasswordEnv  string
 	Database     string
+	Tables       []string
 	SSLMode      string
 	Out          string
 	IncludeViews bool
@@ -101,6 +102,7 @@ func Run(parent context.Context, cfg Config) error {
 		Host:         cfg.Host,
 		Port:         cfg.Port,
 		Database:     cfg.Database,
+		TableFilters: cfg.Tables,
 		IncludeViews: cfg.IncludeViews,
 		GeneratedAt:  time.Now().UTC(),
 	}

@@ -28,7 +28,7 @@ func TestRootCommandHelpIncludesFlags(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"--driver", "--ssh-host", "-o, --out"} {
+	for _, want := range []string{"--driver", "--ssh-host", "--table", "-o, --out"} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("expected help to include %q:\n%s", want, out.String())
 		}

@@ -27,6 +27,15 @@ okfdump \
   --out ./okf/app_db
 ```
 
+Limit the dump to specific tables by repeating `--table` or passing a
+comma-separated list. Unqualified names match any schema; qualified names match
+`schema.table`.
+
+```sh
+okfdump --driver mysql --database app_db --table users --table orders --out ./okf/app_db
+okfdump --driver postgres --database app_db --table public.users,sales.orders --out ./okf/app_db
+```
+
 ## Postgres
 
 ```sh

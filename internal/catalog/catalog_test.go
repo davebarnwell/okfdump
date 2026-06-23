@@ -37,3 +37,33 @@ func TestBuildBundlePreservesSchemaDiscoveryOrder(t *testing.T) {
 		t.Fatalf("sales tables = %#v", bundle.Schemas[0].Tables)
 	}
 }
+
+func TestFilterTablesAllowsUnqualifiedAndQualifiedNames(t *testing.T) {
+	tables := []Table{
+		{Schema: "public", Name: "users"},
+		{Schema: "sales", Name: "users"},
+		{Schema: "sales", Name: "orders"},
+	}
+
+	filtered, err := filterTables(tables, []string{"public.users", "orders"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(filtered) != 2 {
+		t.Fatalf("filtered tables = %#v", filtered)
+	}
+	if filtered[0].Schema != "public" || filtered[0].Name != "users" {
+		t.Fatalf("first filtered table = %#v", filtered[0])
+	}
+	if filtered[1].Schema != "sales" || filtered[1].Name != "orders" {
+		t.Fatalf("second filtered table = %#v", filtered[1])
+	}
+}
+
+func TestFilterTablesReportsMissingFilters(t *testing.T) {
+	_, err := filterTables([]Table{{Schema: "public", Name: "users"}}, []string{"missing"})
+	if err == nil {
+		t.Fatal("expected missing table filter error")
+	}
+}

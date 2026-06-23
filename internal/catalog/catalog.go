@@ -15,6 +15,7 @@ type Source struct {
 	Host         string
 	Port         int
 	Database     string
+	TableFilters []string
 	IncludeViews bool
 	GeneratedAt  time.Time
 }
@@ -79,6 +80,10 @@ func inspectRelational(ctx context.Context, db *sql.DB, source Source, loadTable
 	if err != nil {
 		return Bundle{}, err
 	}
+	tables, err = filterTables(tables, source.TableFilters)
+	if err != nil {
+		return Bundle{}, err
+	}
 
 	byTable := tableMap(tables)
 	if err := loadColumns(ctx, db, source, byTable); err != nil {
@@ -115,6 +120,73 @@ func appendForeignKey(byTable map[string]*Table, schema string, tableName string
 	if table := byTable[tableKey(schema, tableName)]; table != nil {
 		table.ForeignKeys = append(table.ForeignKeys, fk)
 	}
+}
+
+type tableSelector struct {
+	Schema string
+	Table  string
+	Raw    string
+}
+
+func filterTables(tables []Table, filters []string) ([]Table, error) {
+	selectors := tableSelectors(filters)
+	if len(selectors) == 0 {
+		return tables, nil
+	}
+
+	matched := make([]bool, len(selectors))
+	var result []Table
+	for _, table := range tables {
+		for i, selector := range selectors {
+			if selector.matches(table) {
+				result = append(result, table)
+				matched[i] = true
+				break
+			}
+		}
+	}
+
+	var missing []string
+	for i, selector := range selectors {
+		if !matched[i] {
+			missing = append(missing, selector.Raw)
+		}
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("table filter(s) not found: %s", strings.Join(missing, ", "))
+	}
+	return result, nil
+}
+
+func tableSelectors(filters []string) []tableSelector {
+	var selectors []tableSelector
+	for _, filter := range filters {
+		for _, part := range strings.Split(filter, ",") {
+			raw := strings.TrimSpace(part)
+			if raw == "" {
+				continue
+			}
+			selector := tableSelector{Raw: raw}
+			schema, table, ok := strings.Cut(raw, ".")
+			if ok {
+				selector.Schema = strings.ToLower(strings.TrimSpace(schema))
+				selector.Table = strings.ToLower(strings.TrimSpace(table))
+			} else {
+				selector.Table = strings.ToLower(raw)
+			}
+			if selector.Table != "" {
+				selectors = append(selectors, selector)
+			}
+		}
+	}
+	return selectors
+}
+
+func (s tableSelector) matches(table Table) bool {
+	if s.Schema != "" && s.Schema != strings.ToLower(table.Schema) {
+		return false
+	}
+	return s.Table == strings.ToLower(table.Name)
 }
 
 func buildBundle(source Source, tables []Table) Bundle {
