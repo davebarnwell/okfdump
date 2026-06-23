@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/davebarnwell/okfdump/internal/dbdriver"
 )
 
 type Source struct {
-	Driver       string
+	Driver       dbdriver.Driver
 	Host         string
 	Port         int
 	Database     string
@@ -60,9 +62,9 @@ type ForeignKey struct {
 
 func Inspect(ctx context.Context, db *sql.DB, source Source) (Bundle, error) {
 	switch source.Driver {
-	case "mysql":
+	case dbdriver.MySQL:
 		return inspectMySQL(ctx, db, source)
-	case "postgres":
+	case dbdriver.Postgres:
 		return inspectPostgres(ctx, db, source)
 	default:
 		return Bundle{}, fmt.Errorf("unsupported driver %q", source.Driver)

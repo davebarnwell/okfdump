@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/davebarnwell/okfdump/internal/catalog"
+	"github.com/davebarnwell/okfdump/internal/dbdriver"
 )
 
 func TestWriteBundleCreatesConformantConceptFiles(t *testing.T) {
 	root := t.TempDir()
 	bundle := catalog.Bundle{
 		Source: catalog.Source{
-			Driver:      "mysql",
+			Driver:      dbdriver.MySQL,
 			Host:        "db.example.com",
 			Port:        3306,
 			Database:    "app",

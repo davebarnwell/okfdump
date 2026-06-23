@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/davebarnwell/okfdump/internal/catalog"
+	"github.com/davebarnwell/okfdump/internal/dbdriver"
 	"github.com/davebarnwell/okfdump/internal/okf"
 	"github.com/davebarnwell/okfdump/internal/sshforward"
 	"github.com/go-sql-driver/mysql"
@@ -20,7 +21,7 @@ import (
 )
 
 type Config struct {
-	Driver       string
+	Driver       dbdriver.Driver
 	DSN          string
 	Host         string
 	Port         int
@@ -37,7 +38,7 @@ type Config struct {
 
 func DefaultConfig() Config {
 	return Config{
-		Driver:       "mysql",
+		Driver:       dbdriver.MySQL,
 		Host:         "127.0.0.1",
 		SSLMode:      "prefer",
 		Out:          "./okf-bundle",
@@ -78,12 +79,7 @@ func Run(parent context.Context, cfg Config) error {
 		return err
 	}
 
-	driverName := cfg.Driver
-	if driverName == "postgres" || driverName == "postgresql" {
-		driverName = "pgx"
-	}
-
-	db, err := sql.Open(driverName, dsn)
+	db, err := sql.Open(cfg.Driver.SQLDriverName(), dsn)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
@@ -94,7 +90,7 @@ func Run(parent context.Context, cfg Config) error {
 	}
 
 	metadata := catalog.Source{
-		Driver:       canonicalDriver(cfg.Driver),
+		Driver:       cfg.Driver,
 		Host:         cfg.Host,
 		Port:         cfg.Port,
 		Database:     cfg.Database,
@@ -116,18 +112,13 @@ func Run(parent context.Context, cfg Config) error {
 }
 
 func validateConfig(cfg *Config) error {
-	cfg.Driver = strings.ToLower(strings.TrimSpace(cfg.Driver))
-	switch cfg.Driver {
-	case "mysql":
-		if cfg.Port == 0 {
-			cfg.Port = 3306
-		}
-	case "postgres", "postgresql":
-		if cfg.Port == 0 {
-			cfg.Port = 5432
-		}
-	default:
-		return fmt.Errorf("unsupported --driver %q", cfg.Driver)
+	driver, err := dbdriver.Parse(cfg.Driver.String())
+	if err != nil {
+		return err
+	}
+	cfg.Driver = driver
+	if cfg.Port == 0 {
+		cfg.Port = cfg.Driver.DefaultPort()
 	}
 
 	if cfg.PasswordEnv != "" {
@@ -154,9 +145,9 @@ func buildDSN(cfg Config, host string, port int) (string, error) {
 	}
 
 	switch cfg.Driver {
-	case "mysql":
+	case dbdriver.MySQL:
 		return buildMySQLDSN(cfg, host, port), nil
-	case "postgres", "postgresql":
+	case dbdriver.Postgres:
 		return buildPostgresDSN(cfg, host, port), nil
 	default:
 		return "", fmt.Errorf("unsupported --driver %q", cfg.Driver)
@@ -220,14 +211,14 @@ func quotePostgresKeywordValue(value string) string {
 	return "'" + escaped + "'"
 }
 
-func inferDatabase(driver string, dsn string) string {
+func inferDatabase(driver dbdriver.Driver, dsn string) string {
 	switch driver {
-	case "mysql":
+	case dbdriver.MySQL:
 		cfg, err := mysql.ParseDSN(dsn)
 		if err == nil {
 			return cfg.DBName
 		}
-	case "postgres", "postgresql":
+	case dbdriver.Postgres:
 		u, err := url.Parse(dsn)
 		if err == nil && u.Scheme != "" {
 			return strings.TrimPrefix(u.Path, "/")
@@ -245,11 +236,4 @@ func inferPostgresKeywordDatabase(dsn string) string {
 		}
 	}
 	return ""
-}
-
-func canonicalDriver(driver string) string {
-	if driver == "postgresql" {
-		return "postgres"
-	}
-	return driver
 }

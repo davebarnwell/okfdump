@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/davebarnwell/okfdump/internal/catalog"
+	"github.com/davebarnwell/okfdump/internal/dbdriver"
 )
 
 var unsafePathChars = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
@@ -65,7 +66,7 @@ func (w bundleWriter) writeDatabaseFiles() error {
 	}
 
 	index := fmt.Sprintf("# Databases\n\n* [%s](%s.md) - %s database `%s`.\n",
-		title(w.bundle.Database), segment(w.bundle.Database), driverTitle(w.bundle.Driver), w.bundle.Database)
+		title(w.bundle.Database), segment(w.bundle.Database), w.bundle.Driver.DisplayName(), w.bundle.Database)
 	if err := w.write(filepath.Join(dir, "index.md"), index); err != nil {
 		return err
 	}
@@ -77,11 +78,11 @@ func (w bundleWriter) writeDatabaseFiles() error {
 
 	body := strings.Builder{}
 	body.WriteString(frontmatter(map[string]any{
-		"type":        fmt.Sprintf("%s Database", driverTitle(w.bundle.Driver)),
+		"type":        fmt.Sprintf("%s Database", w.bundle.Driver.DisplayName()),
 		"title":       w.bundle.Database,
-		"description": fmt.Sprintf("%s database `%s` with %d schema(s).", driverTitle(w.bundle.Driver), w.bundle.Database, len(w.bundle.Schemas)),
+		"description": fmt.Sprintf("%s database `%s` with %d schema(s).", w.bundle.Driver.DisplayName(), w.bundle.Database, len(w.bundle.Schemas)),
 		"resource":    resourceURI(w.bundle, "", ""),
-		"tags":        []string{w.bundle.Driver, "database"},
+		"tags":        []string{w.bundle.Driver.String(), "database"},
 		"timestamp":   w.bundle.GeneratedAt.Format("2006-01-02T15:04:05Z"),
 	}))
 	body.WriteString("# Schemas\n\n")
@@ -114,11 +115,11 @@ func (w bundleWriter) writeSchemaFiles() error {
 	for _, schema := range w.bundle.Schemas {
 		body := strings.Builder{}
 		body.WriteString(frontmatter(map[string]any{
-			"type":        fmt.Sprintf("%s Schema", driverTitle(w.bundle.Driver)),
+			"type":        fmt.Sprintf("%s Schema", w.bundle.Driver.DisplayName()),
 			"title":       schema.Name,
 			"description": fmt.Sprintf("Schema `%s` in database `%s` with %d table(s) and view(s).", schema.Name, w.bundle.Database, len(schema.Tables)),
 			"resource":    resourceURI(w.bundle, schema.Name, ""),
-			"tags":        []string{w.bundle.Driver, "schema", schema.Name},
+			"tags":        []string{w.bundle.Driver.String(), "schema", schema.Name},
 			"timestamp":   w.bundle.GeneratedAt.Format("2006-01-02T15:04:05Z"),
 		}))
 		body.WriteString("# Tables\n\n")
@@ -179,7 +180,7 @@ func (w bundleWriter) writeTableFiles() error {
 func (w bundleWriter) writeTable(schemaDir string, table catalog.Table) error {
 	body := strings.Builder{}
 	body.WriteString(frontmatter(map[string]any{
-		"type":        fmt.Sprintf("%s %s", driverTitle(w.bundle.Driver), title(table.Kind)),
+		"type":        fmt.Sprintf("%s %s", w.bundle.Driver.DisplayName(), title(table.Kind)),
 		"title":       fmt.Sprintf("%s.%s", table.Schema, table.Name),
 		"description": tableDescription(table),
 		"resource":    resourceURI(w.bundle, table.Schema, table.Name),
@@ -308,8 +309,8 @@ func tableDescription(table catalog.Table) string {
 	return fmt.Sprintf("%s `%s.%s` with %d column(s)", strings.ToLower(title(table.Kind)), table.Schema, table.Name, len(table.Columns))
 }
 
-func tableTags(driver string, table catalog.Table) []string {
-	tags := []string{driver, "table", table.Schema}
+func tableTags(driver dbdriver.Driver, table catalog.Table) []string {
+	tags := []string{driver.String(), "table", table.Schema}
 	if strings.Contains(strings.ToLower(table.Kind), "view") {
 		tags[1] = "view"
 	}
@@ -322,12 +323,12 @@ func resourceURI(bundle catalog.Bundle, schema string, table string) string {
 		hostPort = fmt.Sprintf("%s:%d", bundle.Host, bundle.Port)
 	}
 	if table != "" {
-		return fmt.Sprintf("%s://%s/%s/%s/%s", bundle.Driver, hostPort, bundle.Database, schema, table)
+		return fmt.Sprintf("%s://%s/%s/%s/%s", bundle.Driver.String(), hostPort, bundle.Database, schema, table)
 	}
 	if schema != "" {
-		return fmt.Sprintf("%s://%s/%s/%s", bundle.Driver, hostPort, bundle.Database, schema)
+		return fmt.Sprintf("%s://%s/%s/%s", bundle.Driver.String(), hostPort, bundle.Database, schema)
 	}
-	return fmt.Sprintf("%s://%s/%s", bundle.Driver, hostPort, bundle.Database)
+	return fmt.Sprintf("%s://%s/%s", bundle.Driver.String(), hostPort, bundle.Database)
 }
 
 func columnType(column catalog.Column) string {
@@ -361,9 +362,9 @@ func columnDescription(column catalog.Column) string {
 	return strings.Join(parts, "; ")
 }
 
-func qualifiedTable(driver, schema, table string) string {
+func qualifiedTable(driver dbdriver.Driver, schema, table string) string {
 	switch driver {
-	case "mysql":
+	case dbdriver.MySQL:
 		return fmt.Sprintf("`%s`.`%s`", schema, table)
 	default:
 		return fmt.Sprintf(`"%s"."%s"`, schema, table)
@@ -393,17 +394,6 @@ func title(value string) string {
 		}
 	}
 	return strings.Join(words, " ")
-}
-
-func driverTitle(value string) string {
-	switch strings.ToLower(value) {
-	case "mysql":
-		return "MySQL"
-	case "postgres", "postgresql":
-		return "Postgres"
-	default:
-		return title(value)
-	}
 }
 
 func escapePipes(value string) string {

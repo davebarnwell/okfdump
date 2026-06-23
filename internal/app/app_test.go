@@ -1,29 +1,32 @@
 package app
 
-import "testing"
+import (
+	"github.com/davebarnwell/okfdump/internal/dbdriver"
+	"testing"
+)
 
 func TestInferDatabase(t *testing.T) {
 	tests := []struct {
 		name   string
-		driver string
+		driver dbdriver.Driver
 		dsn    string
 		want   string
 	}{
 		{
 			name:   "mysql",
-			driver: "mysql",
+			driver: dbdriver.MySQL,
 			dsn:    "user:pass@tcp(localhost:3306)/app_db?parseTime=true",
 			want:   "app_db",
 		},
 		{
 			name:   "postgres url",
-			driver: "postgres",
+			driver: dbdriver.Postgres,
 			dsn:    "postgres://user:pass@localhost:5432/app_db?sslmode=disable",
 			want:   "app_db",
 		},
 		{
 			name:   "postgres keyword",
-			driver: "postgres",
+			driver: dbdriver.Postgres,
 			dsn:    "host=localhost port=5432 dbname=app_db user=app",
 			want:   "app_db",
 		},

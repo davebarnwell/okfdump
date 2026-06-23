@@ -31,7 +31,7 @@ func newRootCommand() *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.StringVar(&cfg.Driver, "driver", cfg.Driver, "database driver: mysql or postgres")
+	flags.Var(&cfg.Driver, "driver", "database driver: mysql or postgres")
 	flags.StringVar(&cfg.DSN, "dsn", cfg.DSN, "driver-specific database connection string")
 	flags.StringVar(&cfg.Host, "host", cfg.Host, "database host")
 	flags.IntVar(&cfg.Port, "port", cfg.Port, "database port; defaults to the driver default")
