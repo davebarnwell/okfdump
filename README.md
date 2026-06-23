@@ -14,6 +14,8 @@ an editor, or feed it to an agent as context.
 
 ## Install
 
+[Install Go](https://go.dev/doc/install) and export it's bin directory into your PATH, then.
+
 ```sh
 go install ./cmd/okfdump
 ```

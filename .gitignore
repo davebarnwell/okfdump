@@ -1,4 +1,10 @@
 .DS_Store
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+
 /bin/
 /dist/
 /tmp/
