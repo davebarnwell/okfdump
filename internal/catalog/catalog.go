@@ -63,11 +63,57 @@ type ForeignKey struct {
 func Inspect(ctx context.Context, db *sql.DB, source Source) (Bundle, error) {
 	switch source.Driver {
 	case dbdriver.MySQL:
-		return inspectMySQL(ctx, db, source)
+		return inspectRelational(ctx, db, source, loadMySQLTables, loadMySQLColumns, loadMySQLForeignKeys)
 	case dbdriver.Postgres:
-		return inspectPostgres(ctx, db, source)
+		return inspectRelational(ctx, db, source, loadPostgresTables, loadPostgresColumns, loadPostgresForeignKeys)
 	default:
 		return Bundle{}, fmt.Errorf("unsupported driver %q", source.Driver)
+	}
+}
+
+type tableLoader func(context.Context, *sql.DB, Source) ([]Table, error)
+type relationLoader func(context.Context, *sql.DB, Source, map[string]*Table) error
+
+func inspectRelational(ctx context.Context, db *sql.DB, source Source, loadTables tableLoader, loadColumns relationLoader, loadForeignKeys relationLoader) (Bundle, error) {
+	tables, err := loadTables(ctx, db, source)
+	if err != nil {
+		return Bundle{}, err
+	}
+
+	byTable := tableMap(tables)
+	if err := loadColumns(ctx, db, source, byTable); err != nil {
+		return Bundle{}, err
+	}
+	if err := loadForeignKeys(ctx, db, source, byTable); err != nil {
+		return Bundle{}, err
+	}
+
+	return buildBundle(source, tables), nil
+}
+
+func scanTables(rows *sql.Rows) ([]Table, error) {
+	defer rows.Close()
+
+	var tables []Table
+	for rows.Next() {
+		var table Table
+		if err := rows.Scan(&table.Schema, &table.Name, &table.Kind, &table.Comment); err != nil {
+			return nil, err
+		}
+		tables = append(tables, table)
+	}
+	return tables, rows.Err()
+}
+
+func appendColumn(byTable map[string]*Table, schema string, tableName string, column Column) {
+	if table := byTable[tableKey(schema, tableName)]; table != nil {
+		table.Columns = append(table.Columns, column)
+	}
+}
+
+func appendForeignKey(byTable map[string]*Table, schema string, tableName string, fk ForeignKey) {
+	if table := byTable[tableKey(schema, tableName)]; table != nil {
+		table.ForeignKeys = append(table.ForeignKeys, fk)
 	}
 }
 

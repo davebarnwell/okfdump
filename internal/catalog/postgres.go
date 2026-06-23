@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func inspectPostgres(ctx context.Context, db *sql.DB, source Source) (Bundle, error) {
+func loadPostgresTables(ctx context.Context, db *sql.DB, source Source) ([]Table, error) {
 	relKinds := "('r', 'p')"
 	if source.IncludeViews {
 		relKinds = "('r', 'p', 'v', 'm')"
@@ -30,34 +30,12 @@ WHERE c.relkind IN %s
   AND n.nspname NOT LIKE 'pg_toast%%'
 ORDER BY n.nspname, c.relname`, relKinds))
 	if err != nil {
-		return Bundle{}, fmt.Errorf("inspect Postgres tables: %w", err)
+		return nil, fmt.Errorf("inspect Postgres tables: %w", err)
 	}
-	defer rows.Close()
-
-	var tables []Table
-	for rows.Next() {
-		var table Table
-		if err := rows.Scan(&table.Schema, &table.Name, &table.Kind, &table.Comment); err != nil {
-			return Bundle{}, err
-		}
-		tables = append(tables, table)
-	}
-	if err := rows.Err(); err != nil {
-		return Bundle{}, err
-	}
-
-	byTable := tableMap(tables)
-	if err := loadPostgresColumns(ctx, db, byTable); err != nil {
-		return Bundle{}, err
-	}
-	if err := loadPostgresForeignKeys(ctx, db, byTable); err != nil {
-		return Bundle{}, err
-	}
-
-	return buildBundle(source, tables), nil
+	return scanTables(rows)
 }
 
-func loadPostgresColumns(ctx context.Context, db *sql.DB, byTable map[string]*Table) error {
+func loadPostgresColumns(ctx context.Context, db *sql.DB, source Source, byTable map[string]*Table) error {
 	rows, err := db.QueryContext(ctx, `
 SELECT c.table_schema,
        c.table_name,
@@ -97,14 +75,12 @@ ORDER BY c.table_schema, c.table_name, c.ordinal_position`)
 		col.MaxLength = nullInt(maxLength)
 		col.NumericPrecision = nullInt(precision)
 		col.NumericScale = nullInt(scale)
-		if table := byTable[tableKey(schema, tableName)]; table != nil {
-			table.Columns = append(table.Columns, col)
-		}
+		appendColumn(byTable, schema, tableName, col)
 	}
 	return rows.Err()
 }
 
-func loadPostgresForeignKeys(ctx context.Context, db *sql.DB, byTable map[string]*Table) error {
+func loadPostgresForeignKeys(ctx context.Context, db *sql.DB, source Source, byTable map[string]*Table) error {
 	rows, err := db.QueryContext(ctx, `
 SELECT con.conname,
        ns.nspname,
@@ -137,9 +113,7 @@ ORDER BY ns.nspname, rel.relname, con.conname, cols.ord`)
 		if err := rows.Scan(&fk.Name, &schema, &tableName, &fk.Column, &fk.RefSchema, &fk.RefTable, &fk.RefColumn); err != nil {
 			return err
 		}
-		if table := byTable[tableKey(schema, tableName)]; table != nil {
-			table.ForeignKeys = append(table.ForeignKeys, fk)
-		}
+		appendForeignKey(byTable, schema, tableName, fk)
 	}
 	return rows.Err()
 }
