@@ -1,8 +1,8 @@
 # okfdump
 
 `okfdump` is a Go CLI that connects to a relational database and writes an
-Open Knowledge Format (OKF) v0.1 bundle describing its schemas, tables, columns,
-and foreign-key relationships.
+[Open Knowledge Format (OKF) v0.1 bundle](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing)
+describing its schemas, tables, columns, and foreign-key relationships.
 
 OKF v0.1 is a directory of Markdown files with YAML frontmatter. The bundle this
 tool writes is intentionally static and portable: commit it to git, browse it in
