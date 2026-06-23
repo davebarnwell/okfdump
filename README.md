@@ -1,4 +1,6 @@
-# okfdump, Generate database (MySQL or Postgres) context for your AI agent database
+# okfdump, generate database context for your AI agent
+
+Use `okfdump` to generate database (MySQL or Postgres) context for your AI agent.
 
 `okfdump` is a Go CLI that connects to a relational database and writes an
 [Open Knowledge Format (OKF) v0.1 bundle](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing)
@@ -8,7 +10,7 @@ OKF v0.1 is a directory of Markdown files with YAML frontmatter. The bundle this
 tool writes is intentionally static and portable: commit it to git, browse it in
 an editor, or feed it to an agent as context.
 
-**NOTE:** OKF v0.1 is a starting point, not a finished standard, and is activitly seeking feedback/contributions.
+**NOTE:** OKF v0.1 is a starting point, not a finished standard, and is activitly seeking feedback/contributions. This repo will be updated as the standard evolves Or feel free to submit a pull request for enhancements.
 
 ## Install
 
